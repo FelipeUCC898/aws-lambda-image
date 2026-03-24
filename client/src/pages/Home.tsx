@@ -17,7 +17,7 @@ import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import ImageUploader from '@/components/ImageUploader';
 import ImageGallery from '@/components/ImageGallery';
-import { getPresignedUploadUrl, uploadFileToS3 } from '@/lib/s3-utils';
+import { getPresignedUploadUrl, uploadFileToS3, pollForProcessedImage, downloadProcessedImage } from '@/lib/s3-utils';
 
 interface ProcessedImage {
   id: string;
@@ -56,43 +56,65 @@ export default function Home() {
 
   const handleUpload = async (file: File, filter: string) => {
     setIsLoading(true);
-    const loadingToast = toast.loading('Subiendo imagen a S3...');
+    let loadingToast: string | number | undefined;
 
     try {
+      // Capturar timestamp ANTES de subir
+      const uploadTimestamp = Date.now();
       console.log('🚀 Iniciando proceso de subida');
       console.log('📁 Archivo:', file.name);
       console.log('🎨 Filtro:', filter);
-      console.log('🌐 API URL:', import.meta.env.VITE_API_URL || 'http://localhost:3000');
+      console.log('⏰ Timestamp:', uploadTimestamp);
+      console.log('🌐 API URL:', import.meta.env.VITE_API_URL || 'http://localhost:3002');
 
-      // 1. Obtener URL presignada del backend
+      // PASO 1: Subir imagen a S3
+      loadingToast = toast.loading('📤 Subiendo imagen a S3...');
+      
       console.log('📡 Solicitando URL presignada...');
       const presignedUrl = await getPresignedUploadUrl(file.name, filter);
-      console.log('✅ URL presignada obtenida:', presignedUrl.substring(0, 100) + '...');
+      console.log('✅ URL presignada obtenida');
 
-      // 2. Subir archivo a S3
       console.log('⬆️ Subiendo archivo a S3...');
       await uploadFileToS3(presignedUrl, file);
       console.log('✅ Archivo subido exitosamente');
 
-      // 3. Crear objeto de imagen procesada
+      // PASO 2: Esperar a que Lambda procese la imagen (polling)
+      toast.loading('⚙️ Procesando imagen con Lambda...', { id: loadingToast });
+      
+      console.log('🔄 Iniciando polling para imagen procesada...');
+      const processedImageKey = await pollForProcessedImage(uploadTimestamp, filter, 30);
+      console.log('✅ Imagen procesada encontrada:', processedImageKey);
+
+      // PASO 3: Descargar la imagen procesada
+      toast.loading('📥 Descargando imagen procesada...', { id: loadingToast });
+      
+      const downloadUrl = await downloadProcessedImage(processedImageKey);
+      console.log('✅ URL de descarga obtenida');
+
+      // PASO 4: Crear objeto de imagen procesada y agregarlo a la galería
       const newImage: ProcessedImage = {
-        id: `img_${Date.now()}`,
-        url: URL.createObjectURL(file),
+        id: `img_${uploadTimestamp}`,
+        url: downloadUrl, // URL presignada de la imagen procesada
         filter,
-        timestamp: new Date(),
+        timestamp: new Date(uploadTimestamp),
         originalName: file.name,
       };
 
       setProcessedImages((prev) => [newImage, ...prev]);
 
-      toast.success('✅ Imagen subida exitosamente. Lambda la procesará pronto.', {
+      toast.success('✅ Imagen procesada exitosamente', {
         id: loadingToast,
       });
       console.log('🎉 Proceso completado exitosamente');
+      
     } catch (error) {
       console.error('❌ Error procesando imagen:', error);
-      toast.error(`Error: ${error instanceof Error ? error.message : 'Error desconocido'}`, {
+      
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido';
+      
+      toast.error(`❌ Error: ${errorMessage}`, {
         id: loadingToast,
+        duration: 5000,
       });
     } finally {
       setIsLoading(false);

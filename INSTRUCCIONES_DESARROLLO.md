@@ -10,8 +10,31 @@ npm install
 ### 2. Configurar variables de entorno
 
 Ya están configuradas en:
-- `.env` (backend) - ✅ Creado
-- `client/.env.local` (frontend) - ✅ Creado
+- `.env` (backend - puerto 3002) - ✅ Creado
+- `client/.env.local` (frontend - puerto 3001) - ✅ Creado
+
+### 3. Configurar credenciales de AWS
+
+Asegúrate de tener tus credenciales de AWS configuradas:
+
+**Opción 1: Variables de entorno**
+```bash
+# Windows (PowerShell)
+$env:AWS_ACCESS_KEY_ID="tu_access_key"
+$env:AWS_SECRET_ACCESS_KEY="tu_secret_key"
+
+# Windows (CMD)
+set AWS_ACCESS_KEY_ID=tu_access_key
+set AWS_SECRET_ACCESS_KEY=tu_secret_key
+```
+
+**Opción 2: Archivo de credenciales**
+Crea el archivo `~/.aws/credentials`:
+```
+[default]
+aws_access_key_id = tu_access_key
+aws_secret_access_key = tu_secret_key
+```
 
 ## Iniciar el Proyecto
 
@@ -22,7 +45,7 @@ npm run dev:all
 
 Esto iniciará:
 - Frontend en `http://localhost:3001`
-- Backend en `http://localhost:3000`
+- Backend en `http://localhost:3002`
 
 ### Opción 2: Iniciar por separado
 
@@ -48,15 +71,23 @@ npm run dev
 🚀 Iniciando proceso de subida
 📁 Archivo: tu-imagen.jpg
 🎨 Filtro: grayscale
+⏰ Timestamp: 1774332398009
 📡 Solicitando URL presignada...
-✅ URL presignada obtenida: https://...
+✅ URL presignada obtenida
 ⬆️ Subiendo archivo a S3...
 ✅ Archivo subido exitosamente
+🔄 Iniciando polling para imagen procesada...
+   Intento 1/15...
+   Intento 2/15...
+   ✅ Imagen procesada encontrada: processed/grayscale_grayscale_..._1774332398009_...
+📥 Descargando imagen procesada...
+✅ URL de descarga obtenida
+🎉 Proceso completado exitosamente
 ```
 
 ## Solución de Problemas
 
-### Error: "POST http://localhost:3000/api/presigned-upload-url 404"
+### Error: "POST http://localhost:3002/api/presigned-upload-url 404"
 
 **Causa:** El servidor backend no está corriendo.
 
@@ -111,13 +142,18 @@ set AWS_SECRET_ACCESS_KEY=tu_secret_key
 
 ## Flujo de Procesamiento de Imágenes
 
-1. Usuario selecciona imagen en el frontend
-2. Frontend solicita URL presignada al backend (`POST /api/presigned-upload-url`)
-3. Backend genera URL presignada usando AWS SDK
-4. Frontend sube la imagen directamente a S3 usando la URL presignada
-5. Lambda se activa automáticamente cuando detecta la nueva imagen en S3
-6. Lambda procesa la imagen y la guarda en el bucket de salida
-7. Frontend puede listar las imágenes procesadas (`GET /api/list-processed-images`)
+1. Usuario selecciona imagen en el frontend y elige un filtro
+2. Frontend captura timestamp (Date.now()) ANTES de subir
+3. Frontend solicita URL presignada al backend (`POST /api/presigned-upload-url`)
+4. Backend genera URL presignada usando AWS SDK
+5. Frontend sube la imagen directamente a S3 (bucket de entrada)
+6. Lambda se activa automáticamente cuando detecta la nueva imagen en S3
+7. Lambda procesa la imagen aplicando el filtro
+8. Lambda guarda la imagen procesada en el bucket de salida
+9. Frontend hace polling cada 2 segundos buscando la imagen procesada por timestamp
+10. Frontend encuentra la imagen procesada (con nombre complejo que incluye el filtro repetido)
+11. Frontend descarga la imagen procesada usando URL presignada
+12. Frontend muestra la imagen procesada en la galería
 
 ## Próximos Pasos
 

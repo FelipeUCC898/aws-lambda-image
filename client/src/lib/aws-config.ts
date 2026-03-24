@@ -20,11 +20,16 @@ export const AWS_CONFIG = {
   lambdaFunctionName: import.meta.env.VITE_LAMBDA_FUNCTION_NAME || 'ImageFilterProcessor',
   
   // URL del API backend
-  apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:3000',
+  apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:3002',
   
   // Tiempo de expiración de URLs presignadas (en segundos )
   presignedUrlExpiration: 900, // 15 minutos
 };
+
+// Debug: Mostrar configuración al cargar
+console.log('🔧 AWS_CONFIG cargado:');
+console.log('   API URL:', AWS_CONFIG.apiUrl);
+console.log('   VITE_API_URL env:', import.meta.env.VITE_API_URL);
 
 // Validar configuración
 export function validateConfig(): boolean {

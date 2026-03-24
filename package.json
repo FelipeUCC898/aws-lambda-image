@@ -5,6 +5,7 @@
   "license": "MIT",
   "scripts": {
     "check-setup": "node check-setup.js",
+    "check-servers": "node verificar-servidores.js",
     "dev": "vite --host",
     "dev:server": "tsx watch server/index.ts",
     "dev:all": "concurrently \"npm run dev\" \"npm run dev:server\"",

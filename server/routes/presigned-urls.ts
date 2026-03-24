@@ -93,6 +93,8 @@ router.post('/presigned-download-url', async (req: Request, res: Response) => {
  */
 router.get('/list-processed-images', async (req: Request, res: Response) => {
   try {
+    console.log('📋 Listando imágenes procesadas del bucket:', OUTPUT_BUCKET);
+    
     const command = new ListObjectsV2Command({
       Bucket: OUTPUT_BUCKET,
       Prefix: 'processed/',
@@ -105,9 +107,16 @@ router.get('/list-processed-images', async (req: Request, res: Response) => {
       lastModified: item.LastModified,
     }));
 
+    console.log(`   ✅ Encontradas ${images.length} imágenes`);
+    if (images.length > 0) {
+      images.forEach((img: any, index: number) => {
+        console.log(`      ${index + 1}. ${img.key}`);
+      });
+    }
+
     res.json({ images });
   } catch (error) {
-    console.error('Error listando imágenes:', error);
+    console.error('❌ Error listando imágenes:', error);
     res.status(500).json({ error: 'Error listando imágenes' });
   }
 });
