@@ -1,5 +1,6 @@
 import express from "express";
 import { createServer } from "http";
+import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
@@ -17,6 +18,13 @@ async function startServer() {
 
   // Middleware
   app.use(express.json());
+
+    // Habilitar CORS para desarrollo
+  app.use(cors({
+    origin: ['http://localhost:3001', 'http://localhost:3003', 'http://localhost:5173'],
+    credentials: true
+  } ));
+
 
   // CORS para desarrollo
   app.use((req, res, next) => {
